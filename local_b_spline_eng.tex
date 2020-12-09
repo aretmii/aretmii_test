@@ -1,0 +1,96 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Local B-Spline}
+\label{local_b_spline}
+
+This method creates the smooth, parametric representation of the surface over the entire modelling area by sequentially creating the n-th number of the control lattices with the increasing resolution, in each cell of which the spline surface is calculated, from which a value is assigned to each node in the grid. An undeniable advantage of the method is the qualitative approximation of highly scattered, irregularly spaced set of the points in a fully automatic mode that does not require any complicated settings from the user and a significant increase in the productivity due to the use of B-Splines in the hierarchy of the control grids.\\
+
+The method algorithm has the following steps:
+\begin{itemize}
+	\item 
+	The $ \Omega = {(x,y) | 0 \le x < m, 0 \le y < n} $ area is created, covering all $ P $ input data which equals $ {(x_{c},y_{c},z_{c})} $ in 3D space, where $ (x_{c},y_{c}) $ is the point of input data in 2D space of $ \Omega $ area; 
+	\item 
+	The control lattices $ \Phi_{n} $ are created sequentially with increasing resolution (i.e. the number of lattice cells is constantly increasing), covering the $ \Omega $ area. 
+	
+	The lattice creation algorithm:
+	\begin{itemize}
+		\item 
+		The $ \Phi_{n} (m=1, n=1) $ lattice is created (see \pic{phi_lattice}) containing $ (m+3)\times(n+3) $ nodes (at the beginning $ (1+3)\times(1+3) = 16 nodes $, then at each iteration the value of m and n is multiplied by 1.25 and the resulting number of nodes is rounded). Each lattice cell will be described in one spline surface, by calculating the bicubic spline function using the formula:
+		
+		$$
+		f(x,y) = \sum_{k=0}^3 \sum_{l=0}^3 B_{k}(s)B_{l}(t)\phi_{(i+k)(j+l)},
+		$$
+		
+		where $ i = \lfloor x \rfloor -1 $, $ \lfloor y \rfloor -1 $, $ s= x - \lfloor x \rfloor $, $ t = y - \lfloor y \rfloor $, $ B_{k} $ and $ B_{l} $ - uniform cubic B-spline basis functions defined as:
+		
+		$$
+		B_{0}(t) = (1-t)^3 \div 6,
+		$$
+		
+		$$
+		B_{1}(t) = (3t^3 - 6t^2 + 4) \div 6,
+		$$
+		
+		$$
+		B_{2}(t) = (-3t^3 +3t^2 +3t + 1) \div 6,
+		$$
+		
+		$$
+		B_{3}(t) = t^3 \div 6.
+		$$
+		
+		\begin{figure}[h]
+			\center{
+				\includegraphics[width=0.6\textwidth]{pics_geology/phi_lattice.png}
+			}
+			\caption{Schematic representation of the conditional lattice $ \Phi $ covering the $ \Omega $ area with the set of the scattered points as well as the proximity data set $ \phi $ with the control point $ \phi_{ij} $. In this case, the resulting B-spline function value will be assigned to the node where the control point is located $ \phi_{ij} $.}
+			\label{ris:phi_lattice}
+		\end{figure} 
+		
+		\clearpage
+		
+		\item
+		Each lattice cell of $ \Phi_{n} $ will be presented as a spline patch, on the basis of which a value is assigned to each lattice node, thus enabling a parametric surface model to be created. For the approximation of the scattered source point data $ P $, a bicubic B-Spline function is defined inside the cell of the $ \Phi $ lattice. Each cell of the $ \Phi_{n} $ lattice will be presented as a spline surface, from which a value is assigned to each node in the grid;
+		
+		The spline surface creation algorithm:
+		\begin{itemize}
+			\item 
+			The proximity data set $ \phi $ is created, consisting of 16 nodes, which allows you to limit the number of points affecting the value of a node to only those points that are inside this area (see \pic{phi_lattice});
+			\item
+			The impact of each source point $ (x_{c},y_{c}) $  which has been placed in the proximity data set $ \phi $ is sequentially calculated using the formula:
+			
+			$$
+			\phi_{ij} = \frac{\sum_{c} \omega_{c}^2 \phi_{c}}{\sum_{c}, \omega_{c}^2}
+			$$
+			
+			where $ \omega_{c} = \omega_{kl} =  B_{k}(s)B_{l}(t) $, $ k = (i+1) - \lfloor x_{c} \rfloor $, $ l = (j+1) - \lfloor y_{c} \rfloor $, $ s = x_{c} - \lfloor x_{c} \rfloor $, $ t = y_{c} - \lfloor y_{c} \rfloor $, and $ \phi_{c} $ in turn is calculated using the formula:
+			
+			$$
+			\phi_{c} = \frac{\omega_{c} z_{c}}{\sum_{a=0}^3 \sum_{b=0}^3 \omega_{ab}^2}
+			$$
+			
+			\item
+			The value that affects the resulting function of the bicubic spline $ f $ is assigned to the coefficient $ \phi_{ij} $.
+		\end{itemize}
+		\begin{info}
+			Cells with no source points inside it may appear while the lattice resolution increases. In this case, such cells will be represented by spline surfaces with zero values.
+		\end{info}
+		\item 
+		After estimating the obtained values in each $ \Phi_{n} $ node, we subtract them from the source data (i.e. we calculate the discrepancies between the source data and the surface model $ \Phi_{n} $);
+		\item	
+		The algorithm continues to create the new lattices multiplying the number of cells by 1.25 at each subsequent iteration. The iterative process is repeated until the lattice $ \Phi_{n} $ becomes as detailed as requested by the user at the \textbf{Grid Properties};
+	\end{itemize}
+	\item 
+	The algorithm then splits all lattices of the previous iterations $ \Phi_{n-1} $ to achieve the resolution of the last $ \Phi_{n} $ lattice, sums up the obtained values of all lattices, which results in the desired surface $ \Phi_{ij} $.
+\end{itemize}
+
+The parametric surface model built on each iteration represents the difference between the source data and the sum of the surfaces obtained on all previous iterations (see \pic{local_b_spline}).
+
+\begin{figure}[h]
+	\center{
+		\includegraphics[width=0.5\textwidth]{pics_geology/local_b_spline.png}
+	}
+	\caption{Interpolation of points set using the Local B-spline method on the grid in 10 m steps, both X and Y.}
+	\label{ris:local_b_spline}
+\end{figure}
+
+\clearpage
